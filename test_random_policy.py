@@ -28,7 +28,7 @@ def main():
 	print('Dynamics parameters:', env.get_parameters()) # masses of each link of the Hopper
 
 	n_episodes = 500
-	render = False
+	render = True
 
 	for episode in range(n_episodes):
 		done = False
