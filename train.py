@@ -77,19 +77,23 @@ def main():
 	# graf3
 	window = 20
 	rewards = np.array(episode_rewards)
-	smoothed = np.convolve(rewards, np.ones(window)/window, mode='valid')
+
+	# media mobile “same” mantiene la dimensione:
+	smoothed = np.convolve(rewards, np.ones(window)/window, mode='same')
+
+	# asse x unico
+	x = np.arange(1, len(rewards)+1)
 
 	plt.figure(figsize=(10,5))
-	plt.plot(np.arange(1, len(rewards)+1), rewards,
-			color='lightgray', label='raw')
-	plt.plot(np.arange(window, len(rewards)+1), smoothed,
-			color='C0',        label=f'smoothed (w={window})')
+	plt.plot(x, rewards,  color='lightgray', label='raw')
+	plt.plot(x, smoothed, color='C0',        label=f'smoothed (w={window})')
 	plt.xlabel('Episode')
 	plt.ylabel('Return')
 	plt.title('REINFORCE on CustomHopper')
 	plt.legend()
 	plt.tight_layout()
 	plt.savefig("training_curve.png")
+
 	#plt.show()
 	
 
