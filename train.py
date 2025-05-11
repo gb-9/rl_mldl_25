@@ -75,25 +75,25 @@ def main():
 	torch.save(agent.policy.state_dict(), "model.mdl")
 
 	# graf3
+	# 1) array degli episodi e dei reward
+	episodes = np.arange(1, len(episode_rewards) + 1)
+	rewards  = np.array(episode_rewards)
+
+	# 2) smoothing (media mobile “same”)
 	window = 20
-	rewards = np.array(episode_rewards)
+	kernel = np.ones(window) / window
+	smoothed = np.convolve(rewards, kernel, mode='same')
 
-	# media mobile “same” mantiene la dimensione:
-	smoothed = np.convolve(rewards, np.ones(window)/window, mode='same')
-
-	# asse x unico
-	x = np.arange(1, len(rewards)+1)
-
-	plt.figure(figsize=(10,5))
-	plt.plot(x, rewards,  color='lightgray', label='raw')
-	plt.plot(x, smoothed, color='C0',        label=f'smoothed (w={window})')
+	# 3) plot
+	plt.figure(figsize=(8, 4))
+	plt.plot(episodes, rewards,  label='raw',    alpha=0.3)
+	plt.plot(episodes, smoothed, label=f'smoothed (w={window})')
 	plt.xlabel('Episode')
 	plt.ylabel('Return')
-	plt.title('REINFORCE on CustomHopper')
+	plt.title('Learning Curve (REINFORCE)')
 	plt.legend()
 	plt.tight_layout()
-	plt.savefig("training_curve.png")
-	#plt.show()
+	plt.savefig('training_curve.png')  # salva PNG
 	
 
 if __name__ == '__main__':
