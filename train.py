@@ -3,11 +3,16 @@
 """
 import argparse
 
+import numpy as np
+import matplotlib.pyplot as plt
+
 import torch
 import gym
 
 from env.custom_hopper import *
 from agent import Agent, Policy
+
+
 
 
 def parse_args():
@@ -40,10 +45,8 @@ def main():
 	policy = Policy(observation_space_dim, action_space_dim)
 	agent = Agent(policy, device=args.device)
 
-    #
-    # TASK 2 and 3: interleave data collection to policy updates
-    #
 
+	episode_rewards = [] #graf1
 	for episode in range(args.n_episodes):
 		done = False
 		train_reward = 0
@@ -60,6 +63,8 @@ def main():
 
 			train_reward += reward
 		
+		agent.update_policy() #update policy qua?
+		episode_rewards.append(train_reward) #graf2
 		if (episode+1)%args.print_every == 0:
 			print('Training episode:', episode)
 			print('Episode return:', train_reward)
@@ -67,6 +72,22 @@ def main():
 
 	torch.save(agent.policy.state_dict(), "model.mdl")
 
+	# graf3
+	window = 20
+	rewards = np.array(episode_rewards)
+	smoothed = np.convolve(rewards, np.ones(window)/window, mode='valid')
+
+	plt.figure(figsize=(10,5))
+	plt.plot(np.arange(1, len(rewards)+1), rewards,
+			color='lightgray', label='raw')
+	plt.plot(np.arange(window, len(rewards)+1), smoothed,
+			color='C0',        label=f'smoothed (w={window})')
+	plt.xlabel('Episode')
+	plt.ylabel('Return')
+	plt.title('REINFORCE on CustomHopper')
+	plt.legend()
+	plt.tight_layout()
+	plt.show()
 	
 
 if __name__ == '__main__':

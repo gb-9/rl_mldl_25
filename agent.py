@@ -33,13 +33,6 @@ class Policy(torch.nn.Module):
         init_sigma = 0.5
         self.sigma = torch.nn.Parameter(torch.zeros(self.action_space)+init_sigma)
 
-
-        """
-            Critic network
-        """
-        # TASK 3: critic network for actor-critic algorithm
-
-
         self.init_weights()
 
 
@@ -61,12 +54,6 @@ class Policy(torch.nn.Module):
         sigma = self.sigma_activation(self.sigma)
         normal_dist = Normal(action_mean, sigma)
 
-
-        """
-            Critic
-        """
-        # TASK 3: forward in the critic network
-
         
         return normal_dist
 
@@ -87,28 +74,23 @@ class Agent(object):
 
     def update_policy(self):
         action_log_probs = torch.stack(self.action_log_probs, dim=0).to(self.train_device).squeeze(-1)
-        states = torch.stack(self.states, dim=0).to(self.train_device).squeeze(-1)
-        next_states = torch.stack(self.next_states, dim=0).to(self.train_device).squeeze(-1)
         rewards = torch.stack(self.rewards, dim=0).to(self.train_device).squeeze(-1)
-        done = torch.Tensor(self.done).to(self.train_device)
 
-        self.states, self.next_states, self.action_log_probs, self.rewards, self.done = [], [], [], [], []
+        returns = discount_rewards(rewards, self.gamma)  
 
-        #
-        # TASK 2:
-        #   - compute discounted returns
-        #   - compute policy gradient loss function given actions and returns
-        #   - compute gradients and step the optimizer
-        #
+        #Normalizzare returns
+        eps = np.finfo(np.float32).eps.item()
+        returns = (returns - returns.mean()) / (returns.std() + eps)
+
+        policy_loss = -(action_log_probs * returns).sum()
+
+        self.optimizer.zero_grad()
+        policy_loss.backward()
+        self.optimizer.step()
+
+        self.action_log_probs, self.rewards = [], []
 
 
-        #
-        # TASK 3:
-        #   - compute boostrapped discounted return estimates
-        #   - compute advantage terms
-        #   - compute actor loss and critic loss
-        #   - compute gradients and step the optimizer
-        #
 
         return        
 
