@@ -93,7 +93,6 @@ def main():
 	plt.legend()
 	plt.tight_layout()
 	plt.savefig("training_curve.png")
-
 	#plt.show()
 	
 
