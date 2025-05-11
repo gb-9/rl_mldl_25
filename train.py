@@ -87,7 +87,8 @@ def main():
 	plt.title('REINFORCE on CustomHopper')
 	plt.legend()
 	plt.tight_layout()
-	plt.show()
+	plt.savefig("training_curve.png")
+	#plt.show()
 	
 
 if __name__ == '__main__':
