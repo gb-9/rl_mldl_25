@@ -4,6 +4,8 @@
 import argparse
 
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')         # backend non-interattivo che non cerca matplotlib_inline
 import matplotlib.pyplot as plt
 
 import torch
