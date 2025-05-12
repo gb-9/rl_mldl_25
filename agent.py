@@ -29,9 +29,9 @@ class Policy(torch.nn.Module):
         self.fc3_actor_mean = torch.nn.Linear(self.hidden, action_space)
         
         # Learned standard deviation for exploration at training time 
-        self.sigma_activation = F.softplus
+        self.sigma_activation = F.softplus #to be sure self.sigma is pos
         init_sigma = 0.5
-        self.sigma = torch.nn.Parameter(torch.zeros(self.action_space)+init_sigma)
+        self.sigma = torch.nn.Parameter(torch.zeros(self.action_space)+init_sigma) #parameters to be learnt: st. dev.
 
         self.init_weights()
 
@@ -51,7 +51,7 @@ class Policy(torch.nn.Module):
         x_actor = self.tanh(self.fc2_actor(x_actor))
         action_mean = self.fc3_actor_mean(x_actor)
 
-        sigma = self.sigma_activation(self.sigma)
+        sigma = self.sigma_activation(self.sigma) #to be sure self.sigma is pos
         normal_dist = Normal(action_mean, sigma)
 
         
@@ -65,11 +65,8 @@ class Agent(object):
         self.optimizer = torch.optim.Adam(policy.parameters(), lr=1e-3)
 
         self.gamma = 0.99
-        self.states = []
-        self.next_states = []
         self.action_log_probs = []
         self.rewards = []
-        self.done = []
 
 
     def update_policy(self):
@@ -78,11 +75,12 @@ class Agent(object):
 
         returns = discount_rewards(rewards, self.gamma)  
 
-        #Normalizzare returns
-        eps = np.finfo(np.float32).eps.item()
-        returns = (returns - returns.mean()) / (returns.std() + eps)
+        T = returns.size(0)
+        discounts = (self.gamma ** torch.arange(T, 
+                          dtype=returns.dtype, 
+                          device=self.train_device))
 
-        policy_loss = -(action_log_probs * returns).sum()
+        policy_loss = -(discounts * action_log_probs * returns).mean() #mean anziche sum?
 
         self.optimizer.zero_grad()
         policy_loss.backward()
