@@ -65,6 +65,8 @@ class Agent(object):
         self.optimizer = torch.optim.Adam(policy.parameters(), lr=1e-3)
 
         self.gamma = 0.99
+        self.states = []
+        self.next_states = []
         self.action_log_probs = []
         self.rewards = []
 
