@@ -69,6 +69,7 @@ class Agent(object):
         self.next_states = []
         self.action_log_probs = []
         self.rewards = []
+        self.done = []
 
 
     def update_policy(self):
@@ -89,7 +90,6 @@ class Agent(object):
         self.optimizer.step()
 
         self.action_log_probs, self.rewards = [], []
-
 
 
         return        
