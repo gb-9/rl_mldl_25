@@ -89,7 +89,7 @@ def main() -> None:
             print(f"Episode {episode + 1}: return = {reward_tot:.2f}")
 
     # --- save -------------------------------------------------------------
-    torch.save(agent.policy.state_dict(), f"models/{args.agent}_model.mdl")
+    torch.save(agent.policy.state_dict(), f"models_weights/{args.agent}_model.mdl")
 
     episodes = np.arange(1, len(episode_rewards) + 1)
     rewards  = np.array(episode_rewards)
