@@ -5,7 +5,7 @@ import torch
 import gym
 
 from env.custom_hopper import *
-from agent import Agent, Policy
+from agents.REINFORCE import Agent, Policy
 
 
 

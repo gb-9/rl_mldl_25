@@ -2,99 +2,111 @@
     REINFORCE and Actor-critic algorithms
 """
 import argparse
+import importlib
+import sys
 
 import numpy as np
 import matplotlib
-matplotlib.use('Agg')         # backend non-interattivo che non cerca matplotlib_inline
+matplotlib.use("Agg")           # in order not to plot inline
 import matplotlib.pyplot as plt
 
 import torch
 import gym
 
-from env.custom_hopper import *
-from agent import Agent, Policy
+from env.custom_hopper import *  
 
-
-
-
-def parse_args():
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument('--n-episodes', default=100000, type=int, help='Number of training episodes')
-    parser.add_argument('--print-every', default=20000, type=int, help='Print info every <> episodes')
-    parser.add_argument('--device', default='cpu', type=str, help='network device [cpu, cuda]')
-
+    parser.add_argument("--n-episodes",  default=100_000, type=int,
+                        help="Number of training episodes")
+    parser.add_argument("--print-every", default=20_000, type=int,
+                        help="Print info every N episodes")
+    parser.add_argument("--device",      default="cpu", choices=["cpu", "cuda"],
+                        help="Network device")
+    parser.add_argument("--agent",       default="REINFORCE",
+                        help="Name of the Python file inside 'agents/' "
+                             "without the .py extension "
+                             "(must expose classes Policy and Agent)")
     return parser.parse_args()
 
-args = parse_args()
+
+def import_agent_module(agent_name: str):
+    """
+    Dynamically imports agents
+    """
+    try:
+        module = importlib.import_module(f"agents.{agent_name}")
+    except ModuleNotFoundError as exc:
+        print(f"[ERROR] agent {agent_name} not found!", file=sys.stderr)
+        raise exc
+
+    # check if you have policy and agent classes
+    if not all(hasattr(module, cls) for cls in ("Policy", "Agent")):
+        raise AttributeError(
+            f"[ERROR] {agent_name} should contain 'Policy' and 'Agent' classes!"
+        )
+    return module.Policy, module.Agent
+
+def main() -> None:
+    args = parse_args()
+
+    # --- import environment ------------------------------------------------
+    env = gym.make("CustomHopper-source-v0")
+    # env = gym.make('CustomHopper-target-v0')
+    
+    print("Action space: ", env.action_space)
+    print("State space:  ", env.observation_space)
+    print("Dynamics parameters:", env.get_parameters())
+
+    # --- import agent ------------------------------------------------------
+    PolicyClass, AgentClass = import_agent_module(args.agent)
+
+    obs_dim  = env.observation_space.shape[-1]
+    act_dim  = env.action_space.shape[-1]
+
+    policy = PolicyClass(obs_dim, act_dim)
+    agent  = AgentClass(policy, device=args.device)
+
+    # --- training loop -----------------------------------------------------
+    episode_rewards = []
+    for episode in range(args.n_episodes):
+        state = env.reset()        
+        done, reward_tot = False, 0.0
+
+        while not done:
+            action, action_prob = agent.get_action(state)
+            prev_state = state
+
+            state, reward, done, info = env.step(action.detach().cpu().numpy())
+
+            agent.store_outcome(prev_state, state, action_prob, reward, done)
+            reward_tot += reward
+
+        agent.update_policy()
+        episode_rewards.append(reward_tot)
+
+        if (episode + 1) % args.print_every == 0:
+            print(f"Episode {episode + 1}: return = {reward_tot:.2f}")
+
+    # --- save -------------------------------------------------------------
+    torch.save(agent.policy.state_dict(), f"models/{args.agent}_model.mdl")
+
+    episodes = np.arange(1, len(episode_rewards) + 1)
+    rewards  = np.array(episode_rewards)
+
+    window = 20
+    smoothed = np.convolve(rewards, np.ones(window) / window, mode="same")
+
+    plt.figure(figsize=(8, 4))
+    plt.plot(episodes, rewards,  label="raw", alpha=0.3)
+    plt.plot(episodes, smoothed, label=f"smoothed (w={window})")
+    plt.xlabel("Episode")
+    plt.ylabel("Return")
+    plt.title(f"Learning Curve ({args.agent})")
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(f"training_curves/{args.agent}_training_curve.png")
 
 
-def main():
-
-	env = gym.make('CustomHopper-source-v0')
-	# env = gym.make('CustomHopper-target-v0')
-
-	print('Action space:', env.action_space)
-	print('State space:', env.observation_space)
-	print('Dynamics parameters:', env.get_parameters())
-
-
-	"""
-		Training
-	"""
-	observation_space_dim = env.observation_space.shape[-1]
-	action_space_dim = env.action_space.shape[-1]
-
-	policy = Policy(observation_space_dim, action_space_dim)
-	agent = Agent(policy, device=args.device)
-
-
-	episode_rewards = [] #graf1
-	for episode in range(args.n_episodes):
-		done = False
-		train_reward = 0
-		state = env.reset()  # Reset the environment and observe the initial state
-
-		while not done:  # Loop until the episode is over
-
-			action, action_probabilities = agent.get_action(state)
-			previous_state = state
-
-			state, reward, done, info = env.step(action.detach().cpu().numpy())
-
-			agent.store_outcome(previous_state, state, action_probabilities, reward, done)
-
-			train_reward += reward
-		
-		agent.update_policy() #update policy qua?
-		episode_rewards.append(train_reward) #graf2
-		if (episode+1)%args.print_every == 0:
-			print('Training episode:', episode)
-			print('Episode return:', train_reward)
-
-
-	torch.save(agent.policy.state_dict(), "model.mdl")
-
-	# graf3
-	# 1) array degli episodi e dei reward
-	episodes = np.arange(1, len(episode_rewards) + 1)
-	rewards  = np.array(episode_rewards)
-
-	# 2) smoothing (media mobile “same”)
-	window = 20
-	kernel = np.ones(window) / window
-	smoothed = np.convolve(rewards, kernel, mode='same')
-
-	# 3) plot
-	plt.figure(figsize=(8, 4))
-	plt.plot(episodes, rewards,  label='raw',    alpha=0.3)
-	plt.plot(episodes, smoothed, label=f'smoothed (w={window})')
-	plt.xlabel('Episode')
-	plt.ylabel('Return')
-	plt.title('Learning Curve (REINFORCE)')
-	plt.legend()
-	plt.tight_layout()
-	plt.savefig('training_curve.png')  # salva PNG
-	
-
-if __name__ == '__main__':
-	main()
+if __name__ == "__main__":
+    main()
