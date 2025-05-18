@@ -4,6 +4,7 @@ import numpy as np
 import random
 import torch
 import os
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 from env.custom_hopper import *
@@ -128,7 +129,7 @@ def train_and_save(env_id, log_dir, model_path, use_udr=False):
     )
 
     # 7) Train
-    model.learn(total_timesteps=2_000_000, callback=eval_callback)
+    model.learn(total_timesteps=2_000, callback=eval_callback)
 
     # 8) Save model and normalization stats
     model.save(model_path)
