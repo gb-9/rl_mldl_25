@@ -1,6 +1,8 @@
 import gym
 import argparse
 import numpy as np
+import random
+import torch
 import os
 import matplotlib.pyplot as plt
 
@@ -13,6 +15,13 @@ from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 
+# Fix seeds for reproducibility
+SEED = 42
+np.random.seed(SEED)
+random.seed(SEED)
+torch.manual_seed(SEED)
+if torch.cuda.is_available():
+    torch.cuda.manual_seed_all(SEED)
 
 class HopperMassRandomWrapper(gym.Wrapper):
     """
@@ -38,7 +47,6 @@ class HopperMassRandomWrapper(gym.Wrapper):
         return self.env.sim.model.body_mass.copy()
 
 
-
 def plot_learning_curve(monitor_env, file_path):
     rewards = np.array(monitor_env.get_episode_rewards())
     if rewards.size == 0:
@@ -59,16 +67,18 @@ def plot_learning_curve(monitor_env, file_path):
 
 
 def train_and_save(env_id, log_dir, model_path, use_udr=False):
-    print(f"\n1) Prepare environment {env_id} (UDR={use_udr})...")
+    print(f"\n Prepare environment {env_id} (UDR={use_udr})...")
     # 1) Environment creation and optional UDR
     if env_id == 'CustomHopper-source-v0' and use_udr:
         base_env = gym.make(env_id)
+        base_env.seed(SEED)
         env = HopperMassRandomWrapper(
             base_env,
             ranges={2:(0.7,1.3), 3:(0.7,1.3), 4:(0.7,1.3)}
         )
     else:
         env = gym.make(env_id)
+        env.seed(SEED)
     
     # 2) Monitor and vectorize
     env = Monitor(env, f"{log_dir}/train_monitor", allow_early_resets=True)
@@ -81,6 +91,7 @@ def train_and_save(env_id, log_dir, model_path, use_udr=False):
 
     # 3) Setup evaluation environment
     eval_base = gym.make(env_id)
+    eval_base.seed(SEED+1)
     eval_env = Monitor(eval_base, f"{log_dir}/eval_monitor", allow_early_resets=True)
     eval_vec = DummyVecEnv([lambda: eval_env])
     eval_vec = VecNormalize(eval_vec, norm_obs=True, norm_reward=False)
@@ -93,6 +104,7 @@ def train_and_save(env_id, log_dir, model_path, use_udr=False):
     model = PPO(
         'MlpPolicy',
         vec_env,
+        seed=SEED,
         verbose=0,
         n_steps=8192,
         batch_size=64,
