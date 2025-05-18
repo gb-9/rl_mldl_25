@@ -4,6 +4,7 @@ import numpy as np
 import random
 import torch
 import os
+import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
