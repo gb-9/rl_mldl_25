@@ -62,7 +62,7 @@ def plot_learning_curve(monitor_env, file_path):
     plt.ylabel('Return')
     plt.legend()
     os.makedirs('training_curves', exist_ok=True)
-    base = os.path.basename(file_path).replace('.monitor.csv', '')
+    base = os.path.basename(file_path).replace('.csv', '')
     folder = os.path.basename(os.path.dirname(file_path))
     plt.savefig(f"training_curves/{folder}_{base}.png")
     plt.close()
@@ -123,14 +123,14 @@ def train_and_save(env_id, log_dir, model_path, use_udr=False):
     # 6) Evaluation callback
     eval_callback = EvalCallback(
         eval_vec,
-        best_model_save_path='./ppo_hopper_logs/',
-        log_path='./ppo_hopper_logs/',
+        best_model_save_path=f"{log_dir}/best_model", #'./ppo_hopper_logs/'
+        log_path=log_dir, #'./ppo_hopper_logs/'
         eval_freq=6000,
         deterministic=True
     )
 
     # 7) Train
-    model.learn(total_timesteps=2_000_000, callback=eval_callback)
+    model.learn(total_timesteps=30_000, callback=eval_callback)
 
     # 8) Save model and normalization stats
     model.save(model_path)
@@ -143,8 +143,8 @@ def train_and_save(env_id, log_dir, model_path, use_udr=False):
     print(f"Mean return on {env_id}: {mean_ret:.2f} ± {std_ret:.2f}")
 
     # 10) Plot learning curves
-    plot_learning_curve(env, f"{log_dir}/train_monitor.monitor.csv")
-    plot_learning_curve(eval_env, f"{log_dir}/eval_monitor.monitor.csv")
+    plot_learning_curve(env, f"{log_dir}/train_monitor.csv")
+    plot_learning_curve(eval_env, f"{log_dir}/eval_monitor.csv")
 
 
 def main():
