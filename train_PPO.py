@@ -123,14 +123,14 @@ def train_and_save(env_id, log_dir, model_path, use_udr=False):
     # 6) Evaluation callback
     eval_callback = EvalCallback(
         eval_vec,
-        best_model_save_path="./ppo_hopper_logs/", #'./ppo_hopper_logs/' oppure '{log_dir}/best_model'
-        log_path='./ppo_hopper_logs/', #'./ppo_hopper_logs/' oppure log_dir
+        best_model_save_path=f'{log_dir}/best_model', #'./ppo_hopper_logs/' oppure '{log_dir}/best_model'
+        log_path=log_dir, #'./ppo_hopper_logs/' oppure log_dir
         eval_freq=6000,
         deterministic=True
     )
 
     # 7) Train
-    model.learn(total_timesteps=30_000, callback=eval_callback)
+    model.learn(total_timesteps=2_000_000, callback=eval_callback)
 
     # 8) Save model and normalization stats
     model.save(model_path)
