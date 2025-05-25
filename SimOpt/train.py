@@ -60,23 +60,27 @@ def main():
 
     step = 0
     while all(var > TOL_VAR for _, var in mass_stats.values()):
-        # ------- Sample masses & build simulation env -------
-        masses = [np.random.normal(mu, var, 1)[0] for mu, var in mass_stats.values()]
-        masses_full = env.get_parameters()          # [m0, m1, m2, m3, m4]
-        masses_full[1] = mass_hip
-        masses_full[2] = mass_thigh
-        masses_full[3] = mass_leg
-        build_env("source", masses_full[1:]) 
-
-        # ------- Train a candidate policy in simulation -------
+        # Sample masses
+        mass_hip, mass_thigh, mass_leg = [np.random.normal(mu, var, 1)[0] for mu, var in mass_stats.values() ]  # list= 3 scalar
+        tmp_env = gym.make("CustomHopper-source-v0")      # env temporaneo
+        masses_full = tmp_env.get_parameters()            # [m0, m1, m2, m3, m4]
+        masses_full[1] = mass_hip     # hip
+        masses_full[2] = mass_thigh   # thigh
+        masses_full[3] = mass_leg     # leg
+        # masses_full[4] (foot) no change
+    
+        #Build env
+        sim_env = build_env("source", masses_full[1:])    # 4 valori → OK
+    
+        #Train a candidate policy in simulation
         model = train_policy(sim_env, total_timesteps=10_000)
         model_path = OUTPUT_DIR / "simopt_candidate.zip"
         model.save(model_path.as_posix())
         print(f"Saved temporary policy → {model_path.relative_to(Path.cwd())}")
-
-        # ------- Roll‑outs in real and sim domains -------
-        real_env = build_env("source", masses_full)
-        sim_env_eval = build_env("source", masses)  # fresh eval env
+    
+        #Roll-outs: reale vs. sim 
+        real_env      = build_env("target", masses_full[1:])  # ambiente reale
+        sim_env_eval  = build_env("source", masses_full[1:])  # fresh eval env
 
         real_obs, sim_obs = [], []
         for domain, env, storage in [("REAL", real_env, real_obs), ("SIM", sim_env_eval, sim_obs)]:
