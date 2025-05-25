@@ -15,6 +15,29 @@ def build_env(domain: str, mass_dist_params=None):
         env.set_parameters(mass_dist_params)
     return env
 
+def simulate_and_gap(model, real_env, sim_env, EPISODES_EVAL=50):
+    """Esegue roll-out in real_env e sim_env e restituisce la trajectory_gap."""
+    real_obs, sim_obs = [], []
+    for _ in range(EPISODES_EVAL):
+        # rollout reale
+        obs_r, done_r, ep_r = real_env.reset(), False, []
+        while not done_r:
+            act, _ = model.predict(obs_r, deterministic=True)
+            obs_r, _, done_r, _ = real_env.step(act)
+            ep_r.append(obs_r)
+        real_obs.append(np.concatenate(ep_r))
+
+        # rollout simulato
+        obs_s, done_s, ep_s = sim_env.reset(), False, []
+        while not done_s:
+            act, _ = model.predict(obs_s, deterministic=True)
+            obs_s, _, done_s, _ = sim_env.step(act)
+            ep_s.append(obs_s)
+        sim_obs.append(np.concatenate(ep_s))
+
+    # calcola il gap con la funzione già esistente
+    return trajectory_gap(real_obs, sim_obs)
+
 
 def trajectory_gap(real_obs, sim_obs, w1: float = 1.0, w2: float = 0.1, sigma: float = 1.0) -> float:
     """Compute the discrepancy between two batches of trajectories.
