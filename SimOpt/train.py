@@ -73,7 +73,7 @@ def main():
         sim_env = build_env("source", masses_full)    # 4 valori → OK
     
         #Train a candidate policy in simulation
-        model = train_policy(sim_env, total_timesteps=10_000)
+        model = train_policy(sim_env, total_timesteps=50_000)
         model_path = OUTPUT_DIR / "simopt_candidate.zip"
         model.save(model_path.as_posix())
         print(f"Saved temporary policy → {model_path.relative_to(Path.cwd())}")
@@ -96,45 +96,63 @@ def main():
             mean_rwd, _ = evaluate_policy(model, env, n_eval_episodes=N_EVAL_EPISODES, render=False)
             print(f"Average return {domain}: {mean_rwd:.1f}")
 
-        # ------- Discrepancy & CMA‑ES update -------
-        # Pad / trim to common length
+       # ------- Discrepancy (gap) ------------------------------------------
+        # Pad / trim per avere vettori uguali in lunghezza
         min_len = min(min(len(t) for t in real_obs), min(len(t) for t in sim_obs))
         real_obs = [t[:min_len] for t in real_obs]
-        sim_obs = [t[:min_len] for t in sim_obs]
+        sim_obs  = [t[:min_len] for t in sim_obs]
         disc = trajectory_gap(real_obs, sim_obs)
         print(f"Discrepancy: {disc:.3f}")
-
-        # Optimiser variables
+        
+        # ========== CMA-ES optimisation  ====================================
+        # 0) Ottieni le masse di default per tenere fisso il segmento “leg”
+        base_masses = gym.make("CustomHopper-source-v0").get_parameters()  # 4 valori
+        
+        # 1) Definisci la search-space (hip, thigh, foot)
         param = ng.p.Dict(
-            hip=ng.p.Scalar(init=mass_stats["hip"][0]).set_mutation(sigma=mass_stats["hip"][1]),
-            thigh=ng.p.Scalar(init=mass_stats["thigh"][0]).set_mutation(sigma=mass_stats["thigh"][1]),
-            foot=ng.p.Scalar(init=mass_stats["foot"][0]).set_mutation(sigma=mass_stats["foot"][1]),
+            hip   = ng.p.Scalar(init=mass_stats["hip"][0]  ).set_mutation(sigma=mass_stats["hip"][1]),
+            thigh = ng.p.Scalar(init=mass_stats["thigh"][0]).set_mutation(sigma=mass_stats["thigh"][1]),
+            foot  = ng.p.Scalar(init=mass_stats["foot"][0] ).set_mutation(sigma=mass_stats["foot"][1]),
         )
         optim = ng.optimizers.CMA(parametrization=param, budget=CMA_BUDGET)
+        
+        # 2) Loop CMA-ES: ask → valuta gap → tell
         for _ in range(optim.budget):
-            x = optim.ask()
-            optim.tell(x, disc)
+            cand = optim.ask()                                           # {'hip':…, 'thigh':…, 'foot':…}
+            masses_try = base_masses.copy()                              #   [hip, thigh, leg, foot]
+            masses_try[0] = cand.value["hip"]
+            masses_try[1] = cand.value["thigh"]
+            masses_try[3] = cand.value["foot"]
+        
+            # ambiente simulato con queste masse
+            sim_try = build_env("source", masses_try)
+        
+            # gap tra roll-out reali e simulati (helper in utils.py)
+            gap = simulate_and_gap(model, real_env, sim_try, EPISODES_EVAL=50)
+        
+            optim.tell(cand, gap)                                        # segnala la loss
+        
         rec = optim.recommend().value
-        print("Recommended masses from CMA‑ES:", rec)
-
-        # Update distributions
+        print("Recommended masses from CMA-ES:", rec)
+        
+        # ---------- Aggiorna le distribuzioni ------------------------------
         for key in mass_stats:
             samples = np.random.normal(mass_stats[key][0], mass_stats[key][1], 300)
             samples = np.append(samples, rec[key])
-            mass_stats[key][0] = float(np.mean(samples))
-            mass_stats[key][1] = float(np.var(samples))
+            mass_stats[key][0] = float(np.mean(samples))   # μ
+            mass_stats[key][1] = float(np.var(samples))    # σ²
+        
         print("Updated mass distributions:")
         for k, (mu, var) in mass_stats.items():
             print(f"  {k:<6}: μ={mu:.4f}, σ²={var:.4f}")
-
+        
         step += 1
-
     # ---------- Final training with converged distributions ----------
     print("\nStarting final training phase …")
     test_env = build_env("target", masses_full)
 
     source_rewards = {}
-    model = PPO("MlpPolicy", build_env("source", masses), learning_rate=LR, gamma=GAMMA, verbose=0)
+    model = PPO("MlpPolicy", build_env("source", masses_full), learning_rate=LR, gamma=GAMMA, verbose=0)
     for t in range(EVAL_INTERVAL, TOTAL_TIMESTEPS + 1, EVAL_INTERVAL):
         model.learn(total_timesteps=EVAL_INTERVAL, reset_num_timesteps=False)
         mean_r, _ = evaluate_policy(model, test_env, n_eval_episodes=N_EVAL_EPISODES, render=False)
