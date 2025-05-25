@@ -24,7 +24,7 @@ CMA_BUDGET = 1_300
 TOL_VAR = 1e-3
 LR = 1e-3
 GAMMA = 0.99
-OUTPUT_DIR = Path("models_weights/SimOpt")
+OUTPUT_DIR = Path.cwd() / "models_weights" / "SimOpt"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
@@ -77,7 +77,7 @@ def main():
         model_path = OUTPUT_DIR / "simopt_candidate.zip"
         model.save(model_path.as_posix())
         print(f"Saved temporary policy → {model_path.relative_to(Path.cwd())}")
-    
+        
         #Roll-outs: reale vs. sim 
         real_env      = build_env("target", masses_full)  # ambiente reale
         sim_env_eval  = build_env("source", masses_full)  # fresh eval env
