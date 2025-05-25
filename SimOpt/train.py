@@ -131,7 +131,7 @@ def main():
 
     # ---------- Final training with converged distributions ----------
     print("\nStarting final training phase …")
-    test_env = build_env("target", masses)
+    test_env = build_env("target", masses_full)
 
     source_rewards = {}
     model = PPO("MlpPolicy", build_env("source", masses), learning_rate=LR, gamma=GAMMA, verbose=0)
