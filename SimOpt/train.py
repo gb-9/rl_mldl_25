@@ -70,7 +70,7 @@ def main():
         # masses_full[4] (foot) no change
     
         #Build env
-        sim_env = build_env("source", masses_full[1:])    # 4 valori → OK
+        sim_env = build_env("source", masses_full)    # 4 valori → OK
     
         #Train a candidate policy in simulation
         model = train_policy(sim_env, total_timesteps=10_000)
@@ -79,8 +79,8 @@ def main():
         print(f"Saved temporary policy → {model_path.relative_to(Path.cwd())}")
     
         #Roll-outs: reale vs. sim 
-        real_env      = build_env("target", masses_full[1:])  # ambiente reale
-        sim_env_eval  = build_env("source", masses_full[1:])  # fresh eval env
+        real_env      = build_env("target", masses_full)  # ambiente reale
+        sim_env_eval  = build_env("source", masses_full)  # fresh eval env
 
         real_obs, sim_obs = [], []
         for domain, env, storage in [("REAL", real_env, real_obs), ("SIM", sim_env_eval, sim_obs)]:
