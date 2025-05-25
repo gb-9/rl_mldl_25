@@ -62,7 +62,11 @@ def main():
     while all(var > TOL_VAR for _, var in mass_stats.values()):
         # ------- Sample masses & build simulation env -------
         masses = [np.random.normal(mu, var, 1)[0] for mu, var in mass_stats.values()]
-        sim_env = build_env("source", masses)
+        masses_full = env.get_parameters()          # [m0, m1, m2, m3, m4]
+        masses_full[1] = mass_hip
+        masses_full[2] = mass_thigh
+        masses_full[3] = mass_leg
+        build_env("source", masses_full[1:]) 
 
         # ------- Train a candidate policy in simulation -------
         model = train_policy(sim_env, total_timesteps=10_000)
