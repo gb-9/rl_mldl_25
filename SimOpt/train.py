@@ -71,7 +71,7 @@ def main():
         print(f"Saved temporary policy → {model_path.relative_to(Path.cwd())}")
 
         # ------- Roll‑outs in real and sim domains -------
-        real_env = build_env("target", masses)
+        real_env = build_env("source", masses_full)
         sim_env_eval = build_env("source", masses)  # fresh eval env
 
         real_obs, sim_obs = [], []
