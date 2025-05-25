@@ -74,7 +74,7 @@ def main():
         sim_env = build_env("source", masses_full)    # 4 valori → OK
     
         #Train a candidate policy in simulation
-        model = train_policy(sim_env, total_timesteps=50_000)
+        model = train_policy(sim_env, total_timesteps=20_000)
         model_path = OUTPUT_DIR / "simopt_candidate.zip"
         model.save(model_path.as_posix())
         print(f"Saved temporary policy → {model_path.relative_to(Path.cwd())}")
