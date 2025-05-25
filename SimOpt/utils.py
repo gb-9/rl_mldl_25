@@ -16,10 +16,11 @@ def build_env(domain: str, mass_dist_params=None):
     return env
 
 def simulate_and_gap(model, real_env, sim_env, EPISODES_EVAL=50):
-    """Esegue roll-out in real_env e sim_env e restituisce la trajectory_gap."""
+    """Roll-out della policy in real_env e sim_env e calcolo del gap."""
     real_obs, sim_obs = [], []
+
     for _ in range(EPISODES_EVAL):
-        # rollout reale
+        # --- rollout reale ---------------------------------------------------
         obs_r, done_r, ep_r = real_env.reset(), False, []
         while not done_r:
             act, _ = model.predict(obs_r, deterministic=True)
@@ -27,7 +28,7 @@ def simulate_and_gap(model, real_env, sim_env, EPISODES_EVAL=50):
             ep_r.append(obs_r)
         real_obs.append(np.concatenate(ep_r))
 
-        # rollout simulato
+        # --- rollout simulato -----------------------------------------------
         obs_s, done_s, ep_s = sim_env.reset(), False, []
         while not done_s:
             act, _ = model.predict(obs_s, deterministic=True)
@@ -35,8 +36,13 @@ def simulate_and_gap(model, real_env, sim_env, EPISODES_EVAL=50):
             ep_s.append(obs_s)
         sim_obs.append(np.concatenate(ep_s))
 
-    # calcola il gap con la funzione già esistente
+    # ---------- uniforma la lunghezza delle sequenze ------------------------
+    min_len = min(min(len(t) for t in real_obs), min(len(t) for t in sim_obs))
+    real_obs = [t[:min_len] for t in real_obs]
+    sim_obs  = [t[:min_len] for t in sim_obs]
+
     return trajectory_gap(real_obs, sim_obs)
+
 
 
 def trajectory_gap(real_obs, sim_obs, w1: float = 1.0, w2: float = 0.1, sigma: float = 1.0) -> float:
