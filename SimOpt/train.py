@@ -20,8 +20,8 @@ from .utils import build_env, trajectory_gap, simulate_and_gap
 
 TOTAL_TIMESTEPS = 100_000
 EVAL_INTERVAL = 1_000
-N_EVAL_EPISODES = 50
-CMA_BUDGET = 1_300
+N_EVAL_EPISODES = 15
+CMA_BUDGET = 300
 TOL_VAR = 1e-3
 LR = 1e-3
 GAMMA = 0.99
@@ -74,7 +74,7 @@ def main():
         sim_env = build_env("source", masses_full)    # 4 valori → OK
     
         #Train a candidate policy in simulation
-        model = train_policy(sim_env, total_timesteps=10_000)
+        model = train_policy(sim_env, total_timesteps=20_000)
         model_path = OUTPUT_DIR / "simopt_candidate.zip"
         model.save(model_path.as_posix())
         print(f"Saved temporary policy → {model_path.relative_to(Path.cwd())}")
