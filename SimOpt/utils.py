@@ -6,29 +6,13 @@ from scipy.ndimage import gaussian_filter1d
 import gym
 from env.custom_hopper import CustomHopper  # Local import – adjust if path differs
 
+
 def build_env(domain: str, mass_dist_params=None):
-    """
-    Create a CustomHopper env ('source' or 'target').
-    If `mass_dist_params` is:
-      • None  → usa i parametri di default
-      • len == 3 → assume [hip, thigh, leg] e aggiunge il piede di default
-      • len == 4 → applica direttamente ai segmenti 1..4
-    """
-    if domain not in {"source", "target"}:
-        raise ValueError("domain must be 'source' or 'target'")
     env = gym.make(f"CustomHopper-{domain}-v0")
-
     if mass_dist_params is not None:
-        mass_dist_params = list(mass_dist_params)
-        if len(mass_dist_params) == 3:          # <-- pad automatico
-            default = env.get_parameters()[4]   # massa del piede
-            mass_dist_params.append(default)    # ora len == 4
         if len(mass_dist_params) != 4:
-            raise ValueError(
-                f"Expected 3 or 4 masses, got {len(mass_dist_params)}: {mass_dist_params}"
-            )
+            raise ValueError(f"Expected 4 masses, got {len(mass_dist_params)}")
         env.set_parameters(mass_dist_params)
-
     return env
 
 
