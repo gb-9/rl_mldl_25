@@ -13,7 +13,8 @@ import nevergrad as ng
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from .utils import build_env, trajectory_gap
+from .utils import build_env, trajectory_gap, simulate_and_gap
+
 
 # Hyper‑parameters
 
