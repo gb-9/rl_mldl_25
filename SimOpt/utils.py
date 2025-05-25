@@ -19,11 +19,11 @@ def build_env(domain: str, mass_dist_params: List[np.ndarray]):
     """
     if domain not in {"source", "target"}:
         raise ValueError("domain must be 'source' or 'target'")
-
     env_id = f"CustomHopper-{domain}-v0"
     env = gym.make(env_id)
     # the first element in masses returned by `get_parameters` is often a dummy
-    env.set_parameters(mass_dist_params)
+    if mass_dist_params is not None:
+        env.set_parameters(mass_dist_params)
     return env
 
 
