@@ -7,3 +7,4 @@ Jinja2==3.1.2
 scipy
 patchelf
 nevergrad==1.0.12
+seaborn>=0.12
