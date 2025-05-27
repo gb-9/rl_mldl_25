@@ -12,16 +12,26 @@ from stable_baselines3.common.evaluation import evaluate_policy
 import nevergrad as ng
 import matplotlib.pyplot as plt
 import seaborn as sns
+import random
 
 from .utils import build_env, trajectory_gap, simulate_and_gap
 
+#seed per mantenere risultati
+SEED = 42                       # stesso numero per tutto il gruppo
+
+os.environ["PYTHONHASHSEED"] = str(SEED)   # hash deterministico
+random.seed(SEED)
+np.random.seed(SEED)
+torch.manual_seed(SEED)
+torch.cuda.manual_seed_all(SEED)
+torch.use_deterministic_algorithms(True)
 
 # Hyper‑parameters
 
-TOTAL_TIMESTEPS = 100_000
+TOTAL_TIMESTEPS = 10_000
 EVAL_INTERVAL = 1_000
 N_EVAL_EPISODES = 15
-CMA_BUDGET = 300
+BO_BUDGET = 100
 TOL_VAR = 1e-3
 LR = 1e-3
 GAMMA = 0.99
@@ -46,11 +56,8 @@ def train_policy(env: gym.Env, total_timesteps: int = 10_000):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--seed", type=int, default=SEED)
     args = parser.parse_args()
-
-    np.random.seed(args.seed)
-    torch.manual_seed(args.seed)
 
     # Mean and variance for three body‑part masses (hip, thigh, foot)
     mass_stats = {
@@ -64,6 +71,9 @@ def main():
         # Sample masses
         mass_hip, mass_thigh, mass_leg = [np.random.normal(mu, var, 1)[0] for mu, var in mass_stats.values() ]  # list= 3 scalar
         tmp_env = gym.make("CustomHopper-source-v0")      # env temporaneo
+        tmp_env.seed(SEED)
+        tmp_env.action_space.seed(SEED)
+        tmp_env.observation_space.seed(SEED)
         masses_full = tmp_env.get_parameters()            # [m0, m1, m2, m3, m4]
         masses_full[1] = mass_hip     # hip
         masses_full[2] = mass_thigh   # thigh
@@ -105,7 +115,7 @@ def main():
         disc = trajectory_gap(real_obs, sim_obs)
         print(f"Discrepancy: {disc:.3f}")
         
-        # ========== CMA-ES optimisation  ====================================
+        # Bayesian optimization
         # 0) Ottieni le masse di default per tenere fisso il segmento “leg”
         base_masses = gym.make("CustomHopper-source-v0").get_parameters()  # 4 valori
         
@@ -115,9 +125,9 @@ def main():
             thigh = ng.p.Scalar(init=mass_stats["thigh"][0]).set_mutation(sigma=mass_stats["thigh"][1]),
             foot  = ng.p.Scalar(init=mass_stats["foot"][0] ).set_mutation(sigma=mass_stats["foot"][1]),
         )
-        optim = ng.optimizers.CMA(parametrization=param, budget=CMA_BUDGET)
+        optim = ng.optimizers.BO(parametrization=param, budget=BO_BUDGET, random_state=SEED)
         
-        # 2) Loop CMA-ES: ask → valuta gap → tell
+        # 2) Loop ask → valuta gap → tell
         for _ in range(optim.budget):
             cand = optim.ask()                                           # {'hip':…, 'thigh':…, 'foot':…}
             masses_try = base_masses.copy()                              #   [hip, thigh, leg, foot]
@@ -134,7 +144,7 @@ def main():
             optim.tell(cand, gap)                                        # segnala la loss
         
         rec = optim.recommend().value
-        print("Recommended masses from CMA-ES:", rec)
+        print("Recommended masses from BO:", rec)
         
         # ---------- Aggiorna le distribuzioni ------------------------------
         for key in mass_stats:
