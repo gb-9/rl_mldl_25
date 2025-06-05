@@ -8,3 +8,6 @@ scipy
 patchelf
 scikit-optimize
 seaborn>=0.12
+botorch
+gpytorch
+tqdm
