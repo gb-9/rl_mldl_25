@@ -6,5 +6,5 @@ mujoco-py<2.2,>=2.1
 Jinja2==3.1.2
 scipy
 patchelf
-nevergrad==1.0.12
+scikit-optimize
 seaborn>=0.12
