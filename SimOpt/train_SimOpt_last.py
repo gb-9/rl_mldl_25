@@ -1,4 +1,4 @@
-#CONTROLLARE TUTTI GLI IMPORTI
+#CONTROLLARE TUTTE LE IMPORTAZIONI
 import gym
 import argparse
 import numpy as np
